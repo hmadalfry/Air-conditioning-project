@@ -1,0 +1,62 @@
+#include <Wire.h>
+#include "RTClib.h"
+#include <IRremoteESP8266.h>
+#include <IRsend.h>
+
+#define IR_LED_PIN 4         // مخرج الـ IR
+#define PIR_PIN 14           // مخرج حساس الحركة
+
+IRsend irsend(IR_LED_PIN);
+RTC_DS3231 rtc;
+
+bool personDetected = false;
+DateTime now;
+
+const int ON_HOUR = 14;      // الوقت المطلوب لتشغيل المكيف (مثلاً 2:00 مساءً)
+const int ON_MINUTE = 0;
+const int OFF_HOUR = 15;     // وقت الإيقاف (مثلاً 3:00 مساءً)
+const int OFF_MINUTE = 0;
+
+void setup() {
+  Serial.begin(115200);
+  irsend.begin();
+  pinMode(PIR_PIN, INPUT);
+
+  Wire.begin();
+  if (!rtc.begin()) {
+    Serial.println("لم يتم العثور على DS3231");
+    while (1);
+  }
+
+  if (rtc.lostPower()) {
+    Serial.println("تم إعادة ضبط الساعة، ضبط الوقت الحالي...");
+    rtc.adjust(DateTime(F(_DATE), F(TIME_)));
+  }
+}
+
+void loop() {
+  now = rtc.now();
+  personDetected = digitalRead(PIR_PIN);
+
+  // تحقق من الوقت لتشغيل المكيف
+  if (now.hour() == ON_HOUR && now.minute() == ON_MINUTE && personDetected) {
+    Serial.println("تشغيل المكيف");
+    sendACPower();  // إرسال أمر التشغيل
+    delay(60000);   // منع التكرار لمدة دقيقة
+  }
+
+  // تحقق من الوقت لإيقاف المكيف
+  if (now.hour() == OFF_HOUR && now.minute() == OFF_MINUTE) {
+    Serial.println("إيقاف المكيف");
+    sendACPower();  // إرسال أمر الإيقاف (نفس زر التشغيل)
+    delay(60000);   // منع التكرار لمدة دقيقة
+  }
+
+  delay(1000);  // تحديث كل ثانية
+}
+
+void sendACPower() {
+  // أرسل إشارة IR لتشغيل/إيقاف المكيف (استبدل بالقيمة المناسبة لجهازك)
+  uint16_t rawData[] = { /* كود الريموت هنا */ };
+  irsend.sendRaw(rawData, sizeof(rawData) / sizeof(rawData[0]), 38); // 38KHz
+}
