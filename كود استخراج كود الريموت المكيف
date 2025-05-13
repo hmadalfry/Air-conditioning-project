@@ -1,0 +1,25 @@
+#include <IRremote.hpp>
+
+#define IR_RECEIVE_PIN 14  // غير رقم البن حسب توصيلك لمستقبل الإشارة (مثلاً D14)
+
+void setup() {
+  Serial.begin(115200);
+  while (!Serial) ;  // انتظار الاتصال بالسيريال (ضروري لبعض الأجهزة)
+  Serial.println(F("IRrecvDumpV2 جاهز! انتظر إشارة من الريموت..."));
+
+  IrReceiver.begin(IR_RECEIVE_PIN, ENABLE_LED_FEEDBACK);
+}
+
+void loop() {
+  if (IrReceiver.decode()) {
+    IrReceiver.printIRResultShort(&Serial);  // يطبع البروتوكول والكود إن وجد
+    IrReceiver.printIRSendUsage(&Serial);    // يعطيك كود الإرسال مباشرة
+
+    if (IrReceiver.decodedIRData.protocol == UNKNOWN) {
+      Serial.println(F("🟡 إشارة غير معروفة (Raw data):"));
+      IrReceiver.printIRResultRawFormatted(&Serial, true);
+    }
+
+    IrReceiver.resume(); // الاستعداد للإشارة
+  }
+}
